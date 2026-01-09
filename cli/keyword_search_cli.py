@@ -4,32 +4,15 @@ import argparse
 import json
 import re
 import string
-from typing import TypedDict, cast
+import sys
+from pathlib import Path
+from typing import cast
 
-from nltk.stem import PorterStemmer
+# Add parent directory to path to allow imports when running script directly
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-
-class Movie(TypedDict):
-    id: int
-    title: str
-    description: str
-
-
-def tokenize(query: str) -> list[str]:
-    translator = str.maketrans("", "", string.punctuation)
-    return query.translate(translator).lower().split(" ")
-
-
-def stop(query: list[str]) -> list[str]:
-    f = open("./data/stopwords.txt", "r", encoding="utf-8")
-    stop_words = f.read().splitlines()
-    f.close()
-    return [token for token in query if token not in stop_words]
-
-
-def stem(query: list[str]) -> list[str]:
-    stemmer = PorterStemmer()
-    return [stemmer.stem(token) for token in query]
+from cli.inverted_index import InvertedIndex
+from cli.token_utils import Movie, stem, stop, tokenize
 
 
 def keywordSearch(query: str) -> None:
@@ -59,12 +42,19 @@ def main() -> None:
     search_parser = subparsers.add_parser("search", help="Search movies using BM25")
     _ = search_parser.add_argument("query", type=str, help="Search query")
 
+    build_parser = subparsers.add_parser("build", help="Build inverted index")
+
     args = parser.parse_args()
+    index = InvertedIndex()
 
     match cast(str, args.command).lower():
         case "search":
             print("Searching for:", cast(str, args.query))
             keywordSearch(cast(str, args.query))
+        case "build":
+            index.build()
+            index.save()
+            print(f"First document for token 'meridia' = {index.get_documents('merida')[0]}")
         case _:
             parser.print_help()
 
