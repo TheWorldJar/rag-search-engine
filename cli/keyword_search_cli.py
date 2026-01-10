@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import json
-import re
-import string
 import sys
 from pathlib import Path
 from typing import cast
@@ -12,51 +9,52 @@ from typing import cast
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from cli.inverted_index import InvertedIndex
-from cli.token_utils import Movie, stem, stop, tokenize
+from cli.token_utils import stem, stop, tokenize
 
 
-def keywordSearch(query: str) -> None:
+def keywordSearch(query: str, index: InvertedIndex) -> None:
     found: list[str] = []
-    translator = str.maketrans("", "", string.punctuation)
     stemmed_query = stem(stop(tokenize(query)))
 
-    with open("./data/movies.json", "r", encoding="utf-8") as f:
-        movies: list[Movie] = cast(list[Movie], json.load(f)["movies"])
-        for movie in movies:
-            translated_movie_title = movie["title"].translate(translator).lower()
-            for q_token in stemmed_query:
-                pattern = re.compile(rf"{re.escape(q_token)}.*")
-                if pattern.search(translated_movie_title):
-                    found.append(movie["title"])
-                    break
-        f.close()
+    for token in stemmed_query:
+        found.extend(index.get_documents(token))
+        if len(found) >= 5:
+            break
 
+    found = found[:5]
     for i in range(len(found)):
-        print(f"{i}. {found[i]}")
+        print(f"id:{index.docmap[found[i]]['id']} | title:{index.docmap[found[i]]['title']}")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Keyword Search CLI")
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+    try:
+        parser = argparse.ArgumentParser(description="Keyword Search CLI")
+        subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    search_parser = subparsers.add_parser("search", help="Search movies using BM25")
-    _ = search_parser.add_argument("query", type=str, help="Search query")
+        search_parser = subparsers.add_parser("search", help="Search movies using BM25")
+        _ = search_parser.add_argument("query", type=str, help="Search query")
 
-    build_parser = subparsers.add_parser("build", help="Build inverted index")
+        _ = subparsers.add_parser("build", help="Build inverted index")
 
-    args = parser.parse_args()
-    index = InvertedIndex()
+        args = parser.parse_args()
+        index = InvertedIndex()
 
-    match cast(str, args.command).lower():
-        case "search":
-            print("Searching for:", cast(str, args.query))
-            keywordSearch(cast(str, args.query))
-        case "build":
-            index.build()
-            index.save()
-            print(f"First document for token 'meridia' = {index.get_documents('merida')[0]}")
-        case _:
-            parser.print_help()
+        match cast(str, args.command).lower():
+            case "search":
+                index.load()
+                print("Searching for:", cast(str, args.query))
+                keywordSearch(cast(str, args.query), index)
+            case "build":
+                index.build()
+                index.save()
+                print("Inverted index built and saved")
+            case _:
+                parser.print_help()
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    finally:
+        sys.exit(0)
 
 
 if __name__ == "__main__":

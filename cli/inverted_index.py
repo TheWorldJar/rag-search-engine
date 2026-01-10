@@ -2,7 +2,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from pickle import dump
+from pickle import dump, load
 from typing import cast
 
 # Add parent directory to path to allow imports when running script directly
@@ -27,7 +27,7 @@ class InvertedIndex:
             self.index[token].add(doc_id)
 
     def get_documents(self, term: str) -> list[str]:
-        return sorted(self.index.get(term.lower(), set()))
+        return sorted(self.index.get(term.lower(), set()), key=lambda x: self.docmap[x]["id"])
 
     def build(self):
         with open("./data/movies.json", "r", encoding="utf-8") as f:
@@ -46,4 +46,16 @@ class InvertedIndex:
         f.close()
         with open("./cache/docmap.pkl", "wb") as f:
             dump(self.docmap, f)
+        f.close()
+
+    def load(self):
+        if not os.path.exists("./cache/index.pkl"):
+            raise FileNotFoundError("Index file not found")
+        if not os.path.exists("./cache/docmap.pkl"):
+            raise FileNotFoundError("Docmap file not found")
+        with open("./cache/index.pkl", "rb") as f:
+            self.index = load(f)
+        f.close()
+        with open("./cache/docmap.pkl", "rb") as f:
+            self.docmap = load(f)
         f.close()
