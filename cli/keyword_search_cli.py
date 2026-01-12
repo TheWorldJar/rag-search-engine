@@ -36,6 +36,10 @@ def main() -> None:
 
         _ = subparsers.add_parser("build", help="Build inverted index")
 
+        tf_parser = subparsers.add_parser("tf", help="Get token frequency")
+        _ = tf_parser.add_argument("doc_id", type=str, help="Document ID")
+        _ = tf_parser.add_argument("term", type=str, help="Term")
+
         args = parser.parse_args()
         index = InvertedIndex()
 
@@ -48,10 +52,14 @@ def main() -> None:
                 index.build()
                 index.save()
                 print("Inverted index built and saved")
+            case "tf":
+                index.load()
+                print("Getting token frequency for:", cast(str, args.doc_id), cast(str, args.term))
+                print(index.get_tf(cast(str, args.doc_id), cast(str, args.term)))
             case _:
                 parser.print_help()
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Search Error: {e}")
         sys.exit(1)
     finally:
         sys.exit(0)
