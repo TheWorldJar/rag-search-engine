@@ -13,7 +13,7 @@ from cli.token_utils import stem, stop, tokenize
 
 
 def keywordSearch(query: str, index: InvertedIndex) -> None:
-    found: list[str] = []
+    found: list[int] = []
     stemmed_query = stem(stop(tokenize(query)))
 
     for token in stemmed_query:
@@ -40,6 +40,9 @@ def main() -> None:
         _ = tf_parser.add_argument("doc_id", type=str, help="Document ID")
         _ = tf_parser.add_argument("term", type=str, help="Term")
 
+        idf_parser = subparsers.add_parser("idf", help="Get inverse document frequency")
+        _ = idf_parser.add_argument("term", type=str, help="Term")
+
         args = parser.parse_args()
         index = InvertedIndex()
 
@@ -55,14 +58,17 @@ def main() -> None:
             case "tf":
                 index.load()
                 print("Getting token frequency for:", cast(str, args.doc_id), cast(str, args.term))
-                print(index.get_tf(cast(str, args.doc_id), cast(str, args.term)))
+                print(index.get_tf(cast(int, args.doc_id), cast(str, args.term)))
+            case "idf":
+                index.load()
+                print("Getting inverse document frequency for:", cast(str, args.term))
+                idf = index.get_idf(cast(str, args.term))
+                print(f"Inverse Document Frequency of '{cast(str, args.term)}': {idf:0.2f}")
             case _:
                 parser.print_help()
     except Exception as e:
-        print(f"Search Error: {e}")
+        print(f"Error: {e}")
         sys.exit(1)
-    finally:
-        sys.exit(0)
 
 
 if __name__ == "__main__":

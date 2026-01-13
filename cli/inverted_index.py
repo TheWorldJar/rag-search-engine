@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import sys
 from collections import Counter
@@ -13,16 +14,16 @@ from cli.token_utils import Movie, stem, stop, tokenize
 
 
 class InvertedIndex:
-    index: dict[str, set[str]]
-    docmap: dict[str, Movie]
-    term_freq: dict[str, Counter[str]]
+    index: dict[str, set[int]]
+    docmap: dict[int, Movie]
+    term_freq: dict[int, Counter[str]]
 
     def __init__(self) -> None:
         self.index = {}
         self.docmap = {}
         self.term_freq = {}
 
-    def __add_document(self, doc_id: str, text: str) -> None:
+    def __add_document(self, doc_id: int, text: str) -> None:
         stemmed_text = stem(stop(tokenize(text)))
         for token in stemmed_text:
             if token not in self.index:
@@ -35,15 +36,15 @@ class InvertedIndex:
             else:
                 self.term_freq[doc_id][token] += 1
 
-    def get_documents(self, term: str) -> list[str]:
+    def get_documents(self, term: str) -> list[int]:
         return sorted(self.index.get(term.lower(), set()), key=lambda x: self.docmap[x]["id"])
 
     def build(self):
         with open("./data/movies.json", "r", encoding="utf-8") as f:
             movies: list[Movie] = cast(list[Movie], json.load(f)["movies"])
             for movie in movies:
-                self.__add_document(str(movie["id"]), movie["title"] + " " + movie["description"])
-                self.docmap[str(movie["id"])] = movie
+                self.__add_document(movie["id"], movie["title"] + " " + movie["description"])
+                self.docmap[movie["id"]] = movie
             f.close()
 
     def save(self):
@@ -77,9 +78,19 @@ class InvertedIndex:
             self.term_freq = load(f)
         f.close()
 
-    def get_tf(self, doc_id: str, term: str) -> int:
+    def get_tf(self, doc_id: int, term: str) -> int:
         stemmed_term = stem(stop(tokenize(term)))
         if len(stemmed_term) != 1:
             raise ValueError("Can only get Token Frequency for a single token")
 
         return self.term_freq[doc_id][stemmed_term[0]]
+
+    def get_idf(self, term: str) -> float:
+        stemmed_term = stem(stop(tokenize(term)))
+        if len(stemmed_term) != 1:
+            raise ValueError("Can only get Inverse Document Frequency for a single token")
+
+        total_documents = len(self.docmap)
+        documents_with_term = len(self.index[stemmed_term[0]])
+
+        return math.log((total_documents + 1) / (documents_with_term + 1))

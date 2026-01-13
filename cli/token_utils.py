@@ -6,7 +6,7 @@ from nltk.stem import PorterStemmer
 
 def tokenize(query: str) -> list[str]:
     translator = str.maketrans("", "", string.punctuation)
-    return query.translate(translator).lower().split(" ")
+    return query.translate(translator).lower().split()
 
 
 def stop(query: list[str]) -> list[str]:
