@@ -47,6 +47,9 @@ def main() -> None:
         _ = tfidf_parser.add_argument("doc_id", type=int, help="Document ID")
         _ = tfidf_parser.add_argument("term", type=str, help="Term")
 
+        bm25_idf_parser = subparsers.add_parser("bm25idf", help="Get BM25 Inverse Document Frequency")
+        _ = bm25_idf_parser.add_argument("term", type=str, help="Term")
+
         args = parser.parse_args()
         index = InvertedIndex()
 
@@ -73,6 +76,11 @@ def main() -> None:
                 print("Getting TF-IDF for:", cast(str, args.doc_id), cast(str, args.term))
                 tfidf = index.get_tfidf(cast(int, args.doc_id), cast(str, args.term))
                 print(f"TF-IDF of '{cast(str, args.term)}' in document {cast(str, args.doc_id)}: {tfidf:0.2f}")
+            case "bm25idf":
+                index.load()
+                print("Getting BM25 Inverse Document Frequency for:", cast(str, args.term))
+                bm25idf = index.get_bm25_idf(cast(str, args.term))
+                print(f"BM25 Inverse Document Frequency of '{cast(str, args.term)}': {bm25idf:0.2f}")
             case _:
                 parser.print_help()
     except Exception as e:
