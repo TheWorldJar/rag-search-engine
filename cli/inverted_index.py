@@ -94,3 +94,8 @@ class InvertedIndex:
         documents_with_term = len(self.index[stemmed_term[0]])
 
         return math.log((total_documents + 1) / (documents_with_term + 1))
+
+    def get_tfidf(self, doc_id: int, term: str) -> float:
+        tf = self.get_tf(doc_id, term)
+        idf = self.get_idf(term)
+        return tf * idf

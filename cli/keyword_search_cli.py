@@ -37,11 +37,15 @@ def main() -> None:
         _ = subparsers.add_parser("build", help="Build inverted index")
 
         tf_parser = subparsers.add_parser("tf", help="Get token frequency")
-        _ = tf_parser.add_argument("doc_id", type=str, help="Document ID")
+        _ = tf_parser.add_argument("doc_id", type=int, help="Document ID")
         _ = tf_parser.add_argument("term", type=str, help="Term")
 
         idf_parser = subparsers.add_parser("idf", help="Get inverse document frequency")
         _ = idf_parser.add_argument("term", type=str, help="Term")
+
+        tfidf_parser = subparsers.add_parser("tfidf", help="Get TF-IDF")
+        _ = tfidf_parser.add_argument("doc_id", type=int, help="Document ID")
+        _ = tfidf_parser.add_argument("term", type=str, help="Term")
 
         args = parser.parse_args()
         index = InvertedIndex()
@@ -64,6 +68,11 @@ def main() -> None:
                 print("Getting inverse document frequency for:", cast(str, args.term))
                 idf = index.get_idf(cast(str, args.term))
                 print(f"Inverse Document Frequency of '{cast(str, args.term)}': {idf:0.2f}")
+            case "tfidf":
+                index.load()
+                print("Getting TF-IDF for:", cast(str, args.doc_id), cast(str, args.term))
+                tfidf = index.get_tfidf(cast(int, args.doc_id), cast(str, args.term))
+                print(f"TF-IDF of '{cast(str, args.term)}' in document {cast(str, args.doc_id)}: {tfidf:0.2f}")
             case _:
                 parser.print_help()
     except Exception as e:
