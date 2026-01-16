@@ -10,6 +10,7 @@ from typing import cast
 # Add parent directory to path to allow imports when running script directly
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from cli.conts import BM25_K1
 from cli.token_utils import Movie, stem, stop, tokenize
 
 
@@ -109,3 +110,7 @@ class InvertedIndex:
         documents_with_term = len(self.index[stemmed_term[0]])
 
         return math.log((total_documents - documents_with_term + 0.5) / (documents_with_term + 0.5) + 1)
+
+    def get_bm25_tf(self, doc_id: int, term: str, k1: float = BM25_K1) -> float:
+        tf = self.get_tf(doc_id, term)
+        return (tf * (k1 + 1)) / (tf + k1)

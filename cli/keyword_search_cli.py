@@ -50,6 +50,10 @@ def main() -> None:
         bm25_idf_parser = subparsers.add_parser("bm25idf", help="Get BM25 Inverse Document Frequency")
         _ = bm25_idf_parser.add_argument("term", type=str, help="Term")
 
+        bm25_tf_parser = subparsers.add_parser("bm25tf", help="Get BM25 Token Frequency")
+        _ = bm25_tf_parser.add_argument("doc_id", type=int, help="Document ID")
+        _ = bm25_tf_parser.add_argument("term", type=str, help="Term")
+
         args = parser.parse_args()
         index = InvertedIndex()
 
@@ -81,6 +85,13 @@ def main() -> None:
                 print("Getting BM25 Inverse Document Frequency for:", cast(str, args.term))
                 bm25idf = index.get_bm25_idf(cast(str, args.term))
                 print(f"BM25 Inverse Document Frequency of '{cast(str, args.term)}': {bm25idf:0.2f}")
+            case "bm25tf":
+                index.load()
+                print("Getting BM25 Token Frequency for:", cast(str, args.doc_id), cast(str, args.term))
+                bm25tf = index.get_bm25_tf(cast(int, args.doc_id), cast(str, args.term))
+                print(
+                    f"BM25 Token Frequency of '{cast(str, args.term)}' in document {cast(str, args.doc_id)}: {bm25tf:0.2f}"
+                )
             case _:
                 parser.print_help()
     except Exception as e:
