@@ -10,7 +10,7 @@ from typing import cast
 # Add parent directory to path to allow imports when running script directly
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from cli.conts import BM25_K1
+from cli.consts import BM25_B, BM25_K1
 from cli.token_utils import Movie, stem, stop, tokenize
 
 
@@ -18,14 +18,17 @@ class InvertedIndex:
     index: dict[str, set[int]]
     docmap: dict[int, Movie]
     term_freq: dict[int, Counter[str]]
+    doc_lens: dict[int, int]
 
     def __init__(self) -> None:
         self.index = {}
         self.docmap = {}
         self.term_freq = {}
+        self.doc_lens = {}
 
     def __add_document(self, doc_id: int, text: str) -> None:
         stemmed_text = stem(stop(tokenize(text)))
+        self.doc_lens[doc_id] = len(stemmed_text)
         for token in stemmed_text:
             if token not in self.index:
                 self.index[token] = set()
@@ -36,6 +39,12 @@ class InvertedIndex:
                 self.term_freq[doc_id][token] = 1
             else:
                 self.term_freq[doc_id][token] += 1
+
+    def __get_avg_doc_len(self) -> float:
+        return sum(self.doc_lens.values()) / len(self.doc_lens)
+
+    def __get_bm25_norm_doc_len(self, doc_id: int, b: float = BM25_B) -> float:
+        return 1 - b + b * (self.doc_lens[doc_id] / self.__get_avg_doc_len())
 
     def get_documents(self, term: str) -> list[int]:
         return sorted(self.index.get(term.lower(), set()), key=lambda x: self.docmap[x]["id"])
@@ -61,6 +70,9 @@ class InvertedIndex:
         with open("./cache/term_freq.pkl", "wb") as f:
             dump(self.term_freq, f)
         f.close()
+        with open("./cache/doc_lens.pkl", "wb") as f:
+            dump(self.doc_lens, f)
+        f.close()
 
     def load(self):
         if not os.path.exists("./cache/index.pkl"):
@@ -69,6 +81,8 @@ class InvertedIndex:
             raise FileNotFoundError("Docmap file not found")
         if not os.path.exists("./cache/term_freq.pkl"):
             raise FileNotFoundError("Term frequency file not found")
+        if not os.path.exists("./cache/doc_lens.pkl"):
+            raise FileNotFoundError("Document length file not found")
         with open("./cache/index.pkl", "rb") as f:
             self.index = load(f)
         f.close()
@@ -77,6 +91,9 @@ class InvertedIndex:
         f.close()
         with open("./cache/term_freq.pkl", "rb") as f:
             self.term_freq = load(f)
+        f.close()
+        with open("./cache/doc_lens.pkl", "rb") as f:
+            self.doc_lens = load(f)
         f.close()
 
     def get_tf(self, doc_id: int, term: str) -> int:
@@ -111,6 +128,6 @@ class InvertedIndex:
 
         return math.log((total_documents - documents_with_term + 0.5) / (documents_with_term + 0.5) + 1)
 
-    def get_bm25_tf(self, doc_id: int, term: str, k1: float = BM25_K1) -> float:
+    def get_bm25_tf(self, doc_id: int, term: str, k1: float = BM25_K1, b: float = BM25_B) -> float:
         tf = self.get_tf(doc_id, term)
-        return (tf * (k1 + 1)) / (tf + k1)
+        return (tf * (k1 + 1)) / (tf + k1 * self.__get_bm25_norm_doc_len(doc_id, b))

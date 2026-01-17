@@ -8,6 +8,7 @@ from typing import cast
 # Add parent directory to path to allow imports when running script directly
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from cli.consts import BM25_B, BM25_K1
 from cli.inverted_index import InvertedIndex
 from cli.token_utils import stem, stop, tokenize
 
@@ -53,6 +54,8 @@ def main() -> None:
         bm25_tf_parser = subparsers.add_parser("bm25tf", help="Get BM25 Token Frequency")
         _ = bm25_tf_parser.add_argument("doc_id", type=int, help="Document ID")
         _ = bm25_tf_parser.add_argument("term", type=str, help="Term")
+        _ = bm25_tf_parser.add_argument("k1", type=float, nargs="?", default=BM25_K1, help="Tunable BM25 k1 parameter")
+        _ = bm25_tf_parser.add_argument("b", type=float, nargs="?", default=BM25_B, help="Tunable BM25 b parameter")
 
         args = parser.parse_args()
         index = InvertedIndex()
