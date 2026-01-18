@@ -46,6 +46,11 @@ class InvertedIndex:
     def __get_bm25_norm_doc_len(self, doc_id: int, b: float = BM25_B) -> float:
         return 1 - b + b * (self.doc_lens[doc_id] / self.__get_avg_doc_len())
 
+    def __bm25_score(self, doc_id: int, term: str, k1: float = BM25_K1, b: float = BM25_B) -> float:
+        bm25_tf = self.get_bm25_tf(doc_id, term, k1, b)
+        bm25_idf = self.get_bm25_idf(term)
+        return bm25_tf * bm25_idf
+
     def get_documents(self, term: str) -> list[int]:
         return sorted(self.index.get(term.lower(), set()), key=lambda x: self.docmap[x]["id"])
 
@@ -131,3 +136,17 @@ class InvertedIndex:
     def get_bm25_tf(self, doc_id: int, term: str, k1: float = BM25_K1, b: float = BM25_B) -> float:
         tf = self.get_tf(doc_id, term)
         return (tf * (k1 + 1)) / (tf + k1 * self.__get_bm25_norm_doc_len(doc_id, b))
+
+    def bm25_search(
+        self, query: str, k1: float = BM25_K1, b: float = BM25_B, limit: int = 5
+    ) -> list[tuple[Movie, float]]:
+        stemmed_query = stem(stop(tokenize(query)))
+        scores: dict[int, float] = {}
+        for token in stemmed_query:
+            for doc_id in self.index[token]:
+                if doc_id not in scores:
+                    scores[doc_id] = self.__bm25_score(doc_id, token, k1, b)
+                else:
+                    scores[doc_id] += self.__bm25_score(doc_id, token, k1, b)
+        top_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:limit]
+        return [(self.docmap[doc_id], score) for doc_id, score in top_scores]

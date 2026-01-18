@@ -57,6 +57,14 @@ def main() -> None:
         _ = bm25_tf_parser.add_argument("k1", type=float, nargs="?", default=BM25_K1, help="Tunable BM25 k1 parameter")
         _ = bm25_tf_parser.add_argument("b", type=float, nargs="?", default=BM25_B, help="Tunable BM25 b parameter")
 
+        bm25_search_parser = subparsers.add_parser("bm25search", help="Search movies using BM25")
+        _ = bm25_search_parser.add_argument("query", type=str, help="Search query")
+        _ = bm25_search_parser.add_argument(
+            "k1", type=float, nargs="?", default=BM25_K1, help="Tunable BM25 k1 parameter"
+        )
+        _ = bm25_search_parser.add_argument("b", type=float, nargs="?", default=BM25_B, help="Tunable BM25 b parameter")
+        _ = bm25_search_parser.add_argument("limit", type=int, nargs="?", default=5, help="Number of results to return")
+
         args = parser.parse_args()
         index = InvertedIndex()
 
@@ -95,6 +103,14 @@ def main() -> None:
                 print(
                     f"BM25 Token Frequency of '{cast(str, args.term)}' in document {cast(str, args.doc_id)}: {bm25tf:0.2f}"
                 )
+            case "bm25search":
+                index.load()
+                print("Searching for:", cast(str, args.query))
+                bm25_results = index.bm25_search(
+                    cast(str, args.query), cast(float, args.k1), cast(float, args.b), cast(int, args.limit)
+                )
+                for movie, score in bm25_results:
+                    print(f"({movie['id']}) {movie['title']} - {score:0.2f}")
             case _:
                 parser.print_help()
     except Exception as e:
